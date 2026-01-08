@@ -1,0 +1,103 @@
+---
+- name: Install k3s and Docker on Ubuntu
+  hosts: runner
+  become: true
+
+  tasks:
+    # ------------------------
+    # Prerequisites
+    # ------------------------
+    - name: Install base packages
+      apt:
+        name:
+          - ca-certificates
+          - curl
+        state: present
+        update_cache: yes
+
+    # ------------------------
+    # Install k3s
+    # ------------------------
+    - name: Install k3s (latest stable)
+      shell: |
+        curl -sfL https://get.k3s.io | sh -
+      args:
+        creates: /usr/local/bin/k3s
+
+    - name: Start k3s service
+      systemd:
+        name: k3s
+        state: started
+        enabled: true
+
+    - name: Set kubeconfig permissions (lab-safe)
+      file:
+        path: /etc/rancher/k3s/k3s.yaml
+        mode: "0666"
+      # ⚠️ 777 replaced with 666 (still open, but safer)
+
+    # ------------------------
+    # Install Docker
+    # ------------------------
+    - name: Create Docker keyrings directory
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Add Docker GPG key
+      get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+
+    - name: Add Docker repository
+      copy:
+        dest: /etc/apt/sources.list.d/docker.sources
+        content: |
+          Types: deb
+          URIs: https://download.docker.com/linux/ubuntu
+          Suites: {{ ansible_distribution_release }}
+          Components: stable
+          Signed-By: /etc/apt/keyrings/docker.asc
+
+    - name: Update apt cache after adding Docker repo
+      apt:
+        update_cache: yes
+
+    - name: Install Docker Engine
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+
+    # ------------------------
+    # Manage Docker Service
+    # ------------------------
+    - name: Start and enable Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    # ------------------------
+    # Docker socket permission (lab only)
+    # ------------------------
+    - name: Set Docker socket permission (lab-only)
+      file:
+        path: /var/run/docker.sock
+        mode: "0666"
+      # ⚠️ 777 avoided; 666 is enough for non-root access
+
+    # ------------------------
+    # Pull Nginx image
+    # ------------------------
+    - name: Pull nginx image
+      community.docker.docker_image:
+        name: nginx
+        tag: "1.29.4"
+        source: pull
