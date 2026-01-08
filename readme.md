@@ -431,3 +431,14 @@ You now have:
 
 This environment is ready for installing k3s, Docker, and running CI/CD automation.
 
+
+## How KUBECONFIG_BASE64 is actually used
+cat /etc/rancher/k3s/k3s.yaml | base64 -w 0
+
+
+KUBECONFIG_BASE64 in github action secrets
+
+using ngrok tcp 6443 for exposing the cluster outside.
+
+
+
