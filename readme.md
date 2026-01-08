@@ -243,4 +243,191 @@ Creates and inspects the Kubernetes pod.
 
 - Imperative example:
 ```bash
-kubectl run hello --image=hello-world-ngi
+kubectl run hello --image=hello-world-nginx
+
+```
+
+# Ansible Control & Runner Setup on Ubuntu (WSL)
+
+This document explains how to set up **Ansible with a control user and a separate runner user**
+on Ubuntu (WSL). Each step is described clearly and can be reproduced on any fresh system.
+
+This setup follows best practices for **separation of concerns**:
+- **Control user**: runs Ansible commands
+- **Runner user**: executes tasks on the managed host (localhost)
+
+---
+
+## 1. Create Runner User
+
+Create a dedicated user that Ansible will manage.
+
+```bash
+sudo adduser runner
+```
+
+Add the user to the sudo group:
+
+```bash
+sudo usermod -aG sudo runner
+```
+
+---
+
+## 2. Configure Passwordless Sudo for Runner
+
+Ansible automation requires non-interactive sudo.
+
+Open the sudoers file safely:
+
+```bash
+sudo visudo
+```
+
+Add this line at the **very bottom**:
+
+```text
+runner ALL=(ALL) NOPASSWD:ALL
+```
+
+### Save (Nano editor)
+- CTRL + O → ENTER → CTRL + X
+
+### Verify
+```bash
+su - runner
+sudo whoami
+```
+
+Expected output:
+```
+root
+```
+
+---
+
+## 3. Prepare Control User for Ansible
+
+Generate SSH keys for passwordless authentication:
+
+```bash
+ssh-keygen
+```
+
+Press ENTER for all prompts.
+
+---
+
+## 4. Install and Enable OpenSSH Server
+
+Update packages:
+
+```bash
+sudo apt update
+```
+
+Install OpenSSH server:
+
+```bash
+sudo apt install -y openssh-server
+```
+
+Start and enable SSH:
+
+```bash
+sudo systemctl start ssh
+sudo systemctl enable ssh
+sudo systemctl status ssh
+```
+
+---
+
+## 5. Configure SSH Access to Runner
+
+Copy the SSH key to the runner user:
+
+```bash
+ssh-copy-id runner@localhost
+```
+
+Test SSH access:
+
+```bash
+ssh runner@localhost whoami
+```
+
+Expected output:
+```
+runner
+```
+
+---
+
+## 6. Install Ansible and Git on Control User
+
+```bash
+sudo apt update
+sudo apt install -y ansible git
+```
+
+Verify Ansible installation:
+
+```bash
+ansible --version
+```
+
+---
+
+## 7. Configure Ansible Inventory
+
+Create the Ansible configuration directory:
+
+```bash
+sudo mkdir -p /etc/ansible
+```
+
+Create the hosts file:
+
+```bash
+sudo vi /etc/ansible/hosts
+```
+
+Add the following content:
+
+```ini
+[runner]
+localhost ansible_user=runner ansible_connection=ssh
+```
+
+Save and exit.
+
+---
+
+## 8. Test Ansible Connectivity
+
+Run an Ansible ping test:
+
+```bash
+ansible runner -m ping
+```
+
+Expected output:
+
+```text
+localhost | SUCCESS => {
+    "ping": "pong"
+}
+```
+
+---
+
+## Result
+
+You now have:
+- A dedicated **runner** user with passwordless sudo
+- SSH-based access from the control user
+- A working Ansible inventory
+- A validated Ansible control-to-runner setup
+
+This environment is ready for installing k3s, Docker, and running CI/CD automation.
+
