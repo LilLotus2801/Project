@@ -1,29 +1,98 @@
-Install WSL in windows wsl --install
-installing K3 
-url -sfL https://get.k3s.io | sh - 
-# Check for Ready node, takes ~30 seconds 
-sudo k3s kubectl get node 
+# Kubernetes (k3s) + Docker Setup on Windows using WSL
 
-sudo systemctl status k3s for status check
+This document covers installing WSL, Docker, and k3s on Windows (via Ubuntu WSL) and deploying a sample Nginx application on Kubernetes.
 
-sudo chmod 777 /etc/rancher/k3s/k3s.yaml 
+---
 
+## Install WSL on Windows
+
+```bash
+wsl --install
+```
+
+Installs Windows Subsystem for Linux with Ubuntu. Required to run Linux-based tooling.
+
+---
+
+## Install k3s (Lightweight Kubernetes)
+
+```bash
+curl -sfL https://get.k3s.io | sh -
+```
+
+Installs k3s, a lightweight Kubernetes distribution for local clusters.
+
+---
+
+## Verify Node Status
+
+```bash
+sudo k3s kubectl get node
+```
+
+Checks if the Kubernetes node is in `Ready` state.
+
+---
+
+## Check k3s Service Status
+
+```bash
+sudo systemctl status k3s
+```
+
+Verifies that the k3s service is running.
+
+---
+
+## Update kubeconfig Permissions
+
+```bash
+sudo chmod 777 /etc/rancher/k3s/k3s.yaml
+```
+
+Allows kubectl access without permission issues.
+
+---
+
+## List All Pods
+
+```bash
 kubectl get pods -A
+```
 
+Confirms cluster health by listing all pods.
 
-install docker
+---
 
-lsb_release -a for ubuntu version
+## Install Docker on Ubuntu (WSL)
 
-for installing docker in ubuntu
-# Add Docker's official GPG key:
+### Check Ubuntu Version
+
+```bash
+lsb_release -a
+```
+
+Identifies the Ubuntu version to ensure compatibility.
+
+---
+
+### Add Docker GPG Key
+
+```bash
 sudo apt update
-sudo apt install ca-certificates curl
+sudo apt install -y ca-certificates curl
 sudo install -m 0755 -d /etc/apt/keyrings
 sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 sudo chmod a+r /etc/apt/keyrings/docker.asc
+```
 
-# Add the repository to Apt sources:
+Adds Docker’s official GPG key for secure package installation.
+
+---
+
+### Add Docker Repository
+
+```bash
 sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
 Types: deb
 URIs: https://download.docker.com/linux/ubuntu
@@ -31,81 +100,147 @@ Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
 Components: stable
 Signed-By: /etc/apt/keyrings/docker.asc
 EOF
+```
 
+Configures Docker’s official APT repository.
+
+---
+
+### Install Docker Engine
+
+```bash
 sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
 
+Installs Docker and required components.
 
-sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+---
 
-check status of docker
+## Manage Docker Service
+
+```bash
 sudo systemctl status docker
-
 sudo systemctl start docker
-
-enable at boot
 sudo systemctl enable docker
+```
 
-sudo chmod 777 /var/run/docker.sock && docker pull nginx:1.29.4
+Checks Docker status, starts the service, and enables it at boot.
 
-docker file
+---
+
+## Docker Socket Permission & Image Pull
+
+```bash
+sudo chmod 777 /var/run/docker.sock
+docker pull nginx:1.29.4
+```
+
+Allows non-root Docker usage and pulls the Nginx image.
+
+---
+
+## Create Dockerfile
+
+```dockerfile
 FROM nginx
 COPY static-html-directory /usr/share/nginx/html
+```
 
+Defines a simple Docker image using Nginx with custom static content.
 
+---
+
+## Build Docker Image
+
+```bash
 docker build -t hello-world-nginx:v1 .
+```
 
-docker images 
+Builds a custom Nginx image.
 
+---
+
+## List Docker Images
+
+```bash
+docker images
+```
+
+Displays locally available Docker images.
+
+---
+
+## Run Docker Container
+
+```bash
 docker run --name hello-world-nginx hello-world-nginx:v1
+```
 
+Runs the container in foreground mode.
+
+```bash
 docker run --name hello-world-nginx -d -p 8080:80 hello-world-nginx:v1
-8080 host port 80 container port
+```
 
+Runs the container in detached mode, mapping host port 8080 to container port 80.
+
+---
+
+## Run Pod in Kubernetes (Imperative)
+
+```bash
 kubectl run hello --image=hello-world-nginx:v1
+```
 
+Creates a pod using an imperative command.
+
+---
+
+## List Images in k3s Container Runtime
+
+```bash
 sudo k3s ctr images list
+```
 
+Shows images available in k3s container runtime.
+
+---
+
+## Export and Import Docker Image to k3s
+
+```bash
 docker save hello-world-nginx:v1 -o hello-world-nginx.tar
-
 sudo k3s ctr images import hello-world-nginx.tar
+```
 
+Transfers Docker image into the k3s runtime.
+
+---
+
+## Verify Imported Image
+
+```bash
 sudo k3s ctr images list | grep hello-world-nginx
+```
 
+Confirms the image is available in k3s.
+
+---
+
+## Run Pod Using Imported Image
+
+```bash
 kubectl run hello2 --image=hello-world-nginx:v1
-
 kubectl describe po hello2
+```
 
-imperative vs declartive
-kubectl run hello --image=hello-world-nginx:v1(ex of imperative)
-yml file creation of pods (ex of declarative)
+Creates and inspects the Kubernetes pod.
 
-kubectl get service
+---
 
-kubectl expose pod hello2 --name=hello2-service  --port=80 --target-port=80 --type=NodePort
+## Imperative vs Declarative
 
- to get node ip
-kubectl get nodes -o wide
-
-curl http://172.21.84.48:30717
-
-curl http://node-ip:exposed port
-
- kubectl api-resources 
- to get all the api resources
-
- after we create deplyment ands service yaml files
-
- kubectl apply -f deployment.yaml
-
-  kubectl apply -f service.yaml
-   kubectl apply -f service.yaml -f deployment.yaml
-
-kubectl apply -f test (directory containing yaml files)
-
-kubectl get pods,replicaset,deployment,service
-kubectl get po,rs,deploy,svc
-
-kubectl get nodes -o wide
-curl 172.21.84.48:31494
-
-
+- Imperative example:
+```bash
+kubectl run hello --image=hello-world-ngi
