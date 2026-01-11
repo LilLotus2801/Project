@@ -5,7 +5,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: LightFury
+    runs-on: self-hosted
 
     steps:
       - name: Checkout repo
