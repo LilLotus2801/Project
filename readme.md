@@ -1,4 +1,4 @@
-# Kubernetes (k3s) + Docker Setup on Windows using WSL
+# Kubernetes (k3s) + Docker Setup on Windows using WSL 
 
 This document covers installing WSL, Docker, and k3s on Windows (via Ubuntu WSL) and deploying a sample Nginx application on Kubernetes.
 
