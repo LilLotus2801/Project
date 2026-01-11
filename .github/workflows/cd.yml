@@ -37,7 +37,7 @@ jobs:
 
       - name: Import image into k3s containerd
         run: |
-          sudo k3s ctr images import image.tar
+          k3s ctr images import image.tar
 
       - name: Deploy application
         env:
