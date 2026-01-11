@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: myapp
-        image: ghcr.io/lillotus2801/hello-world-nginx:29bebf97a847f1bb65a5eac6926b76fc80ab8f5d
+        image: ghcr.io/lillotus2801/hello-world-nginx:4ef500beb6d549e8e5360e44cf9ccb1a5680eb5d
         resources:
           requests:
             memory: "64Mi"
