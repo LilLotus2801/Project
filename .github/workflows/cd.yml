@@ -31,13 +31,17 @@ jobs:
         run: |
           docker pull $IMAGE
 
-      - name: Save image as tar
-        run: |
-          docker save $IMAGE -o image.tar
+      # - name: Save image as tar
+      #   run: |
+      #     docker save $IMAGE -o image.tar
 
-      - name: Import image into k3s containerd
+      # - name: Import image into k3s containerd
+      #   run: |
+      #     k3s ctr images import image.tar
+      
+      - name: pull image directly to K3S
         run: |
-          k3s ctr images import image.tar
+          k3s ctr images pull $IMAGE
 
       - name: Deploy application
         env:
